@@ -25,7 +25,7 @@ Install the requirements using conda:
 
 ```shell
 # conda
-source scripts/install_conda.sh
+source install_conda.sh
 ```
 
 ## Preparation of Data
@@ -58,11 +58,10 @@ python train.py --cfg configs/dsr_train.cfg
 @inproceedings{Dwivedi_DSR_2021,
   title = {Learning To Regress Bodies From Images Using Differentiable Semantic Rendering},
   author = {Dwivedi, Sai Kumar and Athanasiou, Nikos and Kocabas, Muhammed and Black, Michael J.},
-  booktitle = {Proc. International Conference on Computer Vision (ICCV)},
-  pages = {11250--11259},
-  month = oct,
-  year = {2021},
-  month_numeric = {10}
+  booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  pages = {11250-11259},
+  month = {October},
+  year = {2021}
 }
 ```
 

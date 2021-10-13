@@ -2,7 +2,7 @@
 log/
 logs/
 trash/
-data/
+dsr_data/
 .idea/
 copy_data.sh
 # Byte-compiled / optimized / DLL files
