@@ -13,17 +13,17 @@ from typing import Dict, List, Union, Any
 from flatten_dict import flatten, unflatten
 
 ##### CONSTANTS #####
-DATASET_NPZ_PATH = 'data/dataset_extras'
+DATASET_NPZ_PATH = 'dsr_data/dataset_extras'
 
-H36M_ROOT = 'data/dataset_folders/h36m'
-COCO_ROOT = 'data/dataset_folders/coco'
-MPI_INF_3DHP_ROOT = 'data/dataset_folders/mpi_inf_3dhp'
-PW3D_ROOT = 'data/dataset_folders/3dpw'
+H36M_ROOT = 'dsr_data/dataset_folders/h36m'
+COCO_ROOT = 'dsr_data/dataset_folders/coco'
+MPI_INF_3DHP_ROOT = 'dsr_data/dataset_folders/mpi_inf_3dhp'
+PW3D_ROOT = 'dsr_data/dataset_folders/3dpw'
 
-JOINT_REGRESSOR_TRAIN_EXTRA = 'data/J_regressor_extra.npy'
-JOINT_REGRESSOR_H36M = 'data/J_regressor_h36m.npy'
-SMPL_MEAN_PARAMS = 'data/smpl_mean_params.npz'
-SMPL_MODEL_DIR = 'data/smpl'
+JOINT_REGRESSOR_TRAIN_EXTRA = 'dsr_data/J_regressor_extra.npy'
+JOINT_REGRESSOR_H36M = 'dsr_data/J_regressor_h36m.npy'
+SMPL_MEAN_PARAMS = 'dsr_data/smpl_mean_params.npz'
+SMPL_MODEL_DIR = 'dsr_data/smpl'
 
 OPENPOSE_PATH = 'datasets/openpose'
 
@@ -41,7 +41,7 @@ DATASET_FILES = [
         'h36m-p1': 'h36m_valid_protocol1.npz',
         'h36m-p2': 'h36m_valid_protocol2.npz',
         'mpi-inf-3dhp': 'mpi_inf_3dhp_valid.npz',
-        '3dpw': '3dpw_all_test_with_mmpose.npz',
+        '3dpw': '3dpw_test_with_mmpose.npz',
     },
     {
         'h36m': 'h36m_train.npz',
@@ -56,7 +56,7 @@ hparams = CN()
 
 # General settings
 hparams.LOG_DIR = 'logs/experiments'
-hparams.METHOD = 'spin' # spin/DSR/pare/fasc/gcl/spin_gcl/
+hparams.METHOD = 'spin' # spin/dsr
 hparams.EXP_NAME = 'default'
 hparams.EXP_ID = ''
 hparams.RUN_TEST = False
@@ -67,6 +67,7 @@ hparams.PL_LOGGING = True
 hparams.DATASET = CN()
 hparams.DATASET.NOISE_FACTOR = 0.4
 hparams.DATASET.ROT_FACTOR = 30
+hparams.DATASET.SCALE_FACTOR = 0.25
 hparams.DATASET.BATCH_SIZE = 64
 hparams.DATASET.NUM_WORKERS = 8
 hparams.DATASET.PIN_MEMORY = True
@@ -126,9 +127,7 @@ hparams.SPIN.LOSS_WEIGHT = 60.
 
 # DSR method hparams
 hparams.DSR = CN()
-hparams.DSR.SR_FITS_PATH = ''
 hparams.DSR.BACKBONE = 'resnet50'
-
 hparams.DSR.SHAPE_LOSS_WEIGHT = 0
 hparams.DSR.KEYPOINT_LOSS_WEIGHT = 5.
 hparams.DSR.KEYPOINT_NATIVE_LOSS_WEIGHT = 5.
@@ -141,11 +140,7 @@ hparams.DSR.GT_TRAIN_WEIGHT = 1.
 hparams.DSR.LOSS_WEIGHT = 60.
 hparams.DSR.GAMMA_VAL = 1.0e-1
 hparams.DSR.SIGMA_VAL = 1.0e-7
-hparams.DSR.BASELINE = False
-hparams.DSR.SRP_PROB = False
 hparams.DSR.SRP_LOSS_TYPE = 'DistM'
-hparams.DSR.USE_CLASS_WEIGHT = False
-hparams.DSR.SRV_EXT = False
 hparams.DSR.START_DSR = -1
 
 def get_hparams_defaults():
@@ -232,10 +227,7 @@ def get_grid_search_configs(config, excluded_keys=[]):
 def run_grid_search_experiments(
         cfg_id,
         cfg_file,
-        bid,
-        memory,
         script='main.py',
-        gpu_min_mem=10000,
 ):
     cfg = yaml.load(open(cfg_file))
 

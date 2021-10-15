@@ -14,7 +14,7 @@ from ..utils.image_utils import crop_cv2, flip_img, flip_pose, flip_kp, transfor
 from ..models import SMPL
 
 from ..semantic_rendering.data_utils import convert_grph_to_labels, convert_grph_to_binary_mask
-from ..semantic_rendering.data_utils import get_srp_fixedPrior, get_srp_probPrior, get_srv_probPrior
+from ..semantic_rendering.data_utils import get_srp_probPrior, get_srv_probPrior
 from ..semantic_rendering.data_utils import convert_fixed_length_vector
 from ..semantic_rendering.loss import get_distance_matrix
 from ..semantic_rendering.constants import SRV_LABELS, SRV_LABELS_MAP
@@ -60,7 +60,7 @@ class BaseDataset(Dataset):
             for f in self.data.files:
                 self.data_subset[f] = self.data[f][rand]
             self.data = self.data_subset
-            if self.method == 'dsr':
+            if self.method == 'dsr' and self.is_train == True:
                 self.grphnames_subset = self.grphnames[rand]
                 self.grphnames = self.grphnames_subset
 
@@ -303,22 +303,16 @@ class BaseDataset(Dataset):
 
             # Get graphonomy data - SR-Pixel
             grph_srp_gt, valid_labels_srp, _ = convert_grph_to_binary_mask(grph, True, True, gt_keypoints_2d_np)
-            if self.options.SRP_PROB:
-                smpl_textures_srp_gt = get_srp_probPrior(valid_labels_srp)
-            else:
-                smpl_textures_srp_gt, _ = get_srp_fixedPrior(valid_labels_srp)
+            smpl_textures_srp_gt = get_srp_probPrior(valid_labels_srp)
             grph_srp_dist_mat = get_distance_matrix(grph_srp_gt)
 
             # Get graphonomy data - SR-Vertex
             grph_srv_gt, valid_labels_srv, class_weight = convert_grph_to_labels(grph, gt_keypoints_2d_np, \
-                                            True, SRV_LABELS_MAP, SRV_LABELS, self.options.USE_CLASS_WEIGHT)
+                                            True, SRV_LABELS_MAP, SRV_LABELS)
             smpl_textures_srv_gt = get_srv_probPrior(True, SRV_LABELS_MAP)
 
             # Combine Silheoute and Probability to be used as texture
-            if self.options.BASELINE:
-                smpl_textures_gt = smpl_textures_srp_gt[None, ...]
-            else:
-                smpl_textures_gt = np.concatenate((smpl_textures_srp_gt[None, ...], \
+            smpl_textures_gt = np.concatenate((smpl_textures_srp_gt[None, ...], \
                                                    smpl_textures_srv_gt), axis=0)
 
             item['grph_srv_label'] = grph_srv_gt

@@ -93,11 +93,7 @@ if __name__ == '__main__':
     hparams = run_grid_search_experiments(
         cfg_id=args.cfg_id,
         cfg_file=args.cfg,
-        bid=args.bid,
-        use_cluster=args.cluster,
-        memory=args.memory,
         script='train.py',
-        gpu_min_mem=args.gpu_min_mem,
     )
 
     main(hparams)

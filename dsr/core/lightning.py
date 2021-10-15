@@ -47,7 +47,6 @@ class LitModule(pl.LightningModule):
                 loss_weight=self.hparams.DSR.LOSS_WEIGHT,
                 gamma_val=self.hparams.DSR.GAMMA_VAL,
                 sigma_val=self.hparams.DSR.SIGMA_VAL,
-                baseline=self.hparams.DSR.BASELINE,
                 srp_loss_type=self.hparams.DSR.SRP_LOSS_TYPE,
             )
         elif self.hparams.METHOD == 'spin' or self.hparams.DATASET.ONLY_IUV == True:
@@ -475,12 +474,6 @@ class LitModule(pl.LightningModule):
         )
 
     def train_dataset(self):
-        train_ds = None
-        if self.hparams.METHOD == 'dsr':
-            self.hparams.DATASET.BASELINE = self.hparams.DSR.BASELINE
-            self.hparams.DATASET.SRP_PROB = self.hparams.DSR.SRP_PROB
-            self.hparams.DATASET.USE_CLASS_WEIGHT = self.hparams.DSR.USE_CLASS_WEIGHT
-
         if self.hparams.DATASET.TRAIN_DS == 'all':
             train_ds = MixedDataset(
                 self.hparams.DATASET,
@@ -503,11 +496,6 @@ class LitModule(pl.LightningModule):
         return train_ds
 
     def validation_dataset(self):
-        if self.hparams.METHOD == 'dsr':
-            self.hparams.DATASET.BASELINE = self.hparams.DSR.BASELINE
-            self.hparams.DATASET.SRP_PROB = self.hparams.DSR.SRP_PROB
-            self.hparams.DATASET.USE_CLASS_WEIGHT = self.hparams.DSR.USE_CLASS_WEIGHT
-
         val_ds = BaseDataset(
             self.hparams.DATASET,
             self.hparams.METHOD,

@@ -28,19 +28,10 @@ GRPH_LABEL_TO_SMPL_JOINT = {'leftShoe': [[7,10], [1.0, 1.0]],
                             'pants': [[1, 2, 4, 5], [1.0, 1.0, 1.0, 1.0]]}
 GRPH_LABEL_TO_KEYPOINTS = {'leftShoe': [14, 19, 20, 21, 30], 'rightShoe': [11, 22, 23, 24, 25]}
 
-#PRETRAINED_CKPT = 'logs/spin/spin_reproduce_latest/02-09-2020_21-22-38_spin_reproduce_latest_training.runsmplify-False/lightning_logs/version_0/checkpoints/epoch=51.ckpt'
-PRETRAINED_CKPT = 'data/eft_baseline.pt'
-RP_TEXTURE_MAX = '/ps/scratch/ps_shared/sdwivedi/hp_datasets_pseudoGT/renderpeople_train/renderpeople_tex_colors_max_smpl.npy'
-RP_TEXTURE_PROB = '/ps/scratch/ps_shared/sdwivedi/hp_datasets_pseudoGT/renderpeople_train/renderpeople_tex_colors_prob_smpl_clean.npy'
+RP_TEXTURE_PROB = 'dsr_data/semantic_prior.npy'
 
 SELECTED_GRPH_LABELS = ['leftShoe', 'rightShoe', 'leftArm', 'rightArm', 'face']
-#SELECTED_GRPH_LABELS = grph_label
-#SELECTED_GRPH_LABELS = ['leftShoe', 'rightShoe', 'leftArm', 'rightArm']
-#SELECTED_GRPH_LABELS = ['leftShoe', 'rightShoe']
 
 SRP_LABELS = SELECTED_GRPH_LABELS
-#SRP_LABELS = GRPH_LABEL
-#SRV_LABELS = CLOTHING_LABEL_MERGE
 SRV_LABELS = GRPH_LABEL_MERGE
-#SRV_LABELS_MAP = CLOTHING_MERGE_MAP
 SRV_LABELS_MAP = GRPH_MERGE_MAP
