@@ -59,19 +59,6 @@ def convert_valid_labels(label_vector, method='srp'):
         valid_labels.append([labels[i] for i,j in enumerate(label_vector[sample]) if j == 1])
     return valid_labels
 
-# Get fixed labels as texture for SRP
-def get_srp_fixedPrior(valid_labels=None):
-    rp_textures_gcl = np.squeeze(np.load(constants.RP_TEXTURE_MAX))
-    smpl_tetxures_gcl_gt = np.ones_like(rp_textures_gcl, dtype=np.float32) * 0.0
-
-    merged_col_label = np.array([1.0, 1.0, 1.0], dtype=np.float32)
-    num_pixels_per_label_gt = []
-    for sel_part in valid_labels:
-        valid_index = np.sum(rp_textures_gcl == constants.GRPH_COLOR_MAP_NORM[sel_part], axis=1) == 3
-        num_pixels_per_label_gt.append(np.flatnonzero(valid_index).size)
-        smpl_tetxures_gcl_gt[valid_index] = merged_col_label
-    return smpl_tetxures_gcl_gt, np.array(num_pixels_per_label_gt)
-
 # Get probabilistic labels as texture for SRP
 def get_srp_probPrior(valid_labels=None):
     rp_textures_prob = np.squeeze(np.load(constants.RP_TEXTURE_PROB)) # -- 13776 x 20
@@ -98,7 +85,7 @@ def get_srv_probPrior(merge=True, merge_map=None):
     rp_textures_gcl = np.swapaxes(rp_textures_gcl, 0, 1)
     return rp_textures_gcl
 
-def convert_grph_to_labels(grph, keypoints=None, merge=True, merge_map=None, merge_label=None, en_cls_ratio=True):
+def convert_grph_to_labels(grph, keypoints=None, merge=True, merge_map=None, merge_label=None):
 
     grph = remove_background_from_keypoints(grph, keypoints)
 
@@ -128,9 +115,7 @@ def convert_grph_to_labels(grph, keypoints=None, merge=True, merge_map=None, mer
 
     new_grph = new_grph[:,:,0]
 
-    cls_ratio = np.ones_like(num_pixels_per_label)
-    if en_cls_ratio:
-        cls_ratio = get_class_ratio(num_pixels_per_label)
+    cls_ratio = get_class_ratio(num_pixels_per_label)
 
     return new_grph, valid_labels, cls_ratio
 
