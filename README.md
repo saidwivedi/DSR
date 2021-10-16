@@ -47,12 +47,12 @@ dsr_data/
 ├── dataset_extras # Contains all pre-processed data
 ├── dataset_folders # Contains all datasets
 │   ├── coco
-|   |   ├── grph_sequences # Contains psuedo-GT Graphonomy Segmentation
-|   |   └── ...
+│   │   ├── grph_sequences # Contains psuedo-GT Graphonomy Segmentation
+│   │   └── ...
 │   └── h36m
-|   |   ├── grph_sequences # Contains psuedo-GT Graphonomy Segmentation
-|   |   └── ...
-|   └── ... # Other datasets
+│   │   ├── grph_sequences # Contains psuedo-GT Graphonomy Segmentation
+│   │   └── ...
+│   └── ... # Other datasets
 ├── dsr_w3DPW_checkpoint.pt  # dsr_checkpoint with 3DPW training
 ├── dsr_wo3DPW_checkpoint.pt # dsr_checkpoint without 3DPW training
 ├── semantic_prior.npy # SMPL Semantic Prior
