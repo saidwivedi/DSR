@@ -37,9 +37,9 @@ def main(hparams):
     model = LitModule(hparams=hparams).to(device)
 
     ckpt_callback = False
-    logger_list = False
 
     # Turn on PL logging and Checkpoint saving
+    tb_logger = None
     if hparams.PL_LOGGING == True:
         ckpt_callback = ModelCheckpoint(
             monitor='val_loss',
@@ -52,12 +52,11 @@ def main(hparams):
             save_dir=log_dir,
             name='tb_logs',
         )
-        logger_list = [tb_logger]
 
     # most basic trainer, uses good defaults (1 gpu)
     trainer = pl.Trainer(
         gpus=1,
-        logger=logger_list,
+        logger=tb_logger,
         max_epochs=hparams.TRAINING.MAX_EPOCHS,
         log_save_interval=hparams.TRAINING.LOG_SAVE_INTERVAL,
         terminate_on_nan=True,

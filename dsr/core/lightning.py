@@ -231,12 +231,7 @@ class LitModule(pl.LightningModule):
         if self.pl_logging == False and self.hparams.TRAINING.SAVE_IMAGES == False:
             return
 
-        if self.pl_logging == True:
-            tb_logger = self.logger[0]
-            comet_logger = self.logger[1]
-
         images = input_batch['img']
-        iuvs = None
 
         pred_vertices = output['smpl_vertices'].detach()
         opt_vertices = input_batch['vertices']
@@ -363,11 +358,6 @@ class LitModule(pl.LightningModule):
         if self.pl_logging == False and self.hparams.TESTING.SAVE_IMAGES == False:
             return
 
-        if self.pl_logging == True:
-            tb_logger = self.logger[0]
-            comet_logger = self.logger[1]
-
-        iuvs = None
         images = input_batch['img']
 
         pred_vertices = output['smpl_vertices'].detach()
@@ -385,8 +375,6 @@ class LitModule(pl.LightningModule):
 
         if self.pl_logging == True:
             tb_logger.experiment.add_image('val_pred_shape', images_pred, self.global_step)
-
-        # tb_logger.experiment.add_image('pred_shape', images_pred, self.global_step)
 
         if self.hparams.TESTING.SAVE_IMAGES == True:
             images_pred = images_pred.cpu().numpy().transpose(1, 2, 0) * 255

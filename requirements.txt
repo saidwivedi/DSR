@@ -1,4 +1,4 @@
-numpy
+numpy=1.18.1
 torch==1.5.1
 torchvision==0.6.1
 torchgeometry==0.1.2
@@ -20,4 +20,3 @@ filterpy==1.4.5
 flatten-dict==0.3.0
 chumpy==1.70
 setuptools==47.3.1
-git+https://github.com/ShichenLiu/SoftRas.git@legacy
