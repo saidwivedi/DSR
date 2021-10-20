@@ -28,7 +28,7 @@ source install_conda.sh
 ```
 
 ### Installing Renderer
-For differentiable renderer, we use [SoftRas](https://github.com/ShichenLiu/SoftRas). Please follow the installation guidelines mentioned in the repo. Checkout to the `legacy` branch before starting the installation.
+For differentiable renderer, we use [SoftRas](https://github.com/ShichenLiu/SoftRas). Please follow the installation guidelines mentioned in the repo. Checkout to the `legacy` branch before starting the installation. However, differentiable renderer is not required for running demo.
 
 ## Preparation of Data
 
@@ -53,8 +53,8 @@ dsr_data/
 │   │   ├── grph_sequences # Contains psuedo-GT Graphonomy Segmentation
 │   │   └── ...
 │   └── ... # Other datasets
-├── dsr_w3DPW_checkpoint.pt  # dsr_checkpoint with 3DPW training
-├── dsr_wo3DPW_checkpoint.pt # dsr_checkpoint without 3DPW training
+├── dsr_w3DPW_checkpoint.pt  # dsr_mcheckpoint with 3DPW training
+├── dsr_wo3DPW_checkpoint.pt # dsr_mcheckpoint without 3DPW training
 ├── semantic_prior.npy # SMPL Semantic Prior
 ├── smpl 
 │   └── ... # SMPL Models
@@ -85,7 +85,7 @@ python train.py --cfg configs/dsr_eval.cfg
 
 ## Training
 
-For training, we use the off-the-self human parsing model [Graphonomy](https://github.com/Gaoyiminggithub/Graphonomy) to get pseudo ground truth clothing segmentation. Use the `Universal Model` of Graphonomy to generate the segmentation mask. Read the supplementary paper for more information on how to generate psuedo ground-truth. After preparing the data, run the following command
+For training, we use the off-the-self human parsing model [Graphonomy](https://github.com/Gaoyiminggithub/Graphonomy) to get pseudo ground truth clothing segmentation. We use the `Universal Model` of Graphonomy to generate the segmentation mask. Read the supplementary paper for more information on how to generate psuedo ground-truth. After preparing the data, run the following command
 ```shell
 # For more details on different parameters, refer to dsr/core/config.py
 python train.py --cfg configs/dsr_train.cfg

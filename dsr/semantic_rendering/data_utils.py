@@ -38,29 +38,29 @@ def remove_background_from_keypoints(img, keypoints):
     img[:,0:xmin], img[:,xmax:] = 0.0, 0.0
     return img
 
-def convert_fixed_length_vector(valid_labels, method='srp'):
-    if method == 'srp':
-        labels = constants.SRP_LABELS
-    elif method == 'srv':
-        labels = constants.SRV_LABELS
+def convert_fixed_length_vector(valid_labels, method='dsr_mc'):
+    if method == 'dsr_mc':
+        labels = constants.DSR_MC_LABELS
+    elif method == 'dsr_c':
+        labels = constants.DSR_C_LABELS
     label_vector = np.zeros((len(labels)), dtype=np.int)
     valid_index = [labels.index(val_label) for val_label in valid_labels]
     label_vector[valid_index] = 1
     return label_vector
 
-def convert_valid_labels(label_vector, method='srp'):
-    if method == 'srp':
-        labels = constants.SRP_LABELS
-    elif method == 'srv':
-        labels = constants.SRV_LABELS
+def convert_valid_labels(label_vector, method='dsr_mc'):
+    if method == 'dsr_mc':
+        labels = constants.DSR_MC_LABELS
+    elif method == 'dsr_c':
+        labels = constants.DSR_C_LABELS
 
     valid_labels = []
     for sample in range(label_vector.shape[0]):
         valid_labels.append([labels[i] for i,j in enumerate(label_vector[sample]) if j == 1])
     return valid_labels
 
-# Get probabilistic labels as texture for SRP
-def get_srp_probPrior(valid_labels=None):
+# Get probabilistic labels as texture for DSR_MC
+def get_dsr_mc_probPrior(valid_labels=None):
     rp_textures_prob = np.squeeze(np.load(constants.RP_TEXTURE_PROB)) # -- 13776 x 20
     smpl_textures_gcl_gt = np.zeros(rp_textures_prob.shape[0], dtype=np.float32)
 
@@ -71,7 +71,7 @@ def get_srp_probPrior(valid_labels=None):
 
     return smpl_textures_gcl_gt
 
-def get_srv_probPrior(merge=True, merge_map=None):
+def get_dsr_c_probPrior(merge=True, merge_map=None):
     rp_textures_gcl = np.squeeze(np.load(constants.RP_TEXTURE_PROB)) # -- 13776 x 20
 
     if merge == True:
@@ -128,7 +128,7 @@ def convert_grph_to_binary_mask(grph, norm=False, only_valid_labels=True, keypoi
     binary_mask = 255. * np.array([1., 1., 1.], dtype=np.float32)
     new_grph = np.zeros_like(grph)
 
-    for sel_part in constants.SRP_LABELS:
+    for sel_part in constants.DSR_MC_LABELS:
         if sel_part == 'background':
             continue
         valid_index = np.sum(grph == constants.GRPH_COLOR_MAP[sel_part], axis=2) == 3
@@ -143,7 +143,7 @@ def convert_grph_to_binary_mask(grph, norm=False, only_valid_labels=True, keypoi
     if norm == True:
         new_grph = new_grph/255.
     if only_valid_labels == False:
-        valid_labels = constants.SRP_LABELS
+        valid_labels = constants.DSR_MC_LABELS
 
     return new_grph, valid_labels, np.array(num_pixels_per_label)
 

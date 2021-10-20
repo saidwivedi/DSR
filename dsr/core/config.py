@@ -133,14 +133,14 @@ hparams.DSR.KEYPOINT_LOSS_WEIGHT = 5.
 hparams.DSR.KEYPOINT_NATIVE_LOSS_WEIGHT = 5.
 hparams.DSR.POSE_LOSS_WEIGHT = 1.
 hparams.DSR.BETA_LOSS_WEIGHT = 0.001
-hparams.DSR.SRP_LOSS_WEIGHT = 0.2
-hparams.DSR.SRV_LOSS_WEIGHT = 0.2
+hparams.DSR.DSR_MC_LOSS_WEIGHT = 0.2
+hparams.DSR.DSR_C_LOSS_WEIGHT = 0.2
 hparams.DSR.OPENPOSE_TRAIN_WEIGHT = 0.
 hparams.DSR.GT_TRAIN_WEIGHT = 1.
 hparams.DSR.LOSS_WEIGHT = 60.
 hparams.DSR.GAMMA_VAL = 1.0e-1
 hparams.DSR.SIGMA_VAL = 1.0e-7
-hparams.DSR.SRP_LOSS_TYPE = 'DistM'
+hparams.DSR.DSR_MC_LOSS_TYPE = 'DistM'
 hparams.DSR.START_DSR = -1
 
 def get_hparams_defaults():

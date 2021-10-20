@@ -10,7 +10,7 @@ from ..core.config import SMPL_MODEL_DIR
 from ..utils.geometry import batch_rodrigues
 
 from ..semantic_rendering.data_utils import convert_valid_labels, convert_camT_to_proj_mat
-from ..semantic_rendering.loss import srp_loss
+from ..semantic_rendering.loss import dsr_mc_loss
 
 class HMRLoss(nn.Module):
     def __init__(
@@ -119,14 +119,14 @@ class DSRLoss(nn.Module):
             pose_loss_weight=1.,
             beta_loss_weight=0.001,
             openpose_train_weight=0.,
-            srp_loss_weight=0.2,
-            srv_loss_weight=0.2,
+            dsr_mc_loss_weight=0.2,
+            dsr_c_loss_weight=0.2,
             gt_train_weight=1.,
             loss_weight=60.,
             gamma_val=1.0e-1,
             sigma_val=1.0e-7,
             baseline=False,
-            srp_loss_type='DistM',
+            dsr_mc_loss_type='DistM',
     ):
         super(DSRLoss, self).__init__()
         self.criterion_shape = nn.L1Loss()
@@ -147,18 +147,18 @@ class DSRLoss(nn.Module):
         self.light_intensity_ambient = 1.0
         self.light_intensity_directionals = 0
         self.img_size = constants.IMG_RES
-        self.criterion_srv = nn.CrossEntropyLoss()
+        self.criterion_dsr_c = nn.CrossEntropyLoss()
         self.logsoftmax = nn.LogSoftmax(dim=1)
         self.baseline = baseline
-        self.srp_loss_type = 'nIOU' if self.baseline else srp_loss_type
+        self.dsr_mc_loss_type = 'nIOU' if self.baseline else dsr_mc_loss_type
         smpl = SMPL(SMPL_MODEL_DIR, batch_size=1, create_transl=False)
         self.smpl_faces = torch.from_numpy(smpl.faces.astype('int32'))[None].cuda()
 
-        self.srp_loss_weight = srp_loss_weight
-        self.srv_loss_weight = srv_loss_weight
+        self.dsr_mc_loss_weight = dsr_mc_loss_weight
+        self.dsr_c_loss_weight = dsr_c_loss_weight
 
-    def sr_losses(self, gt_batch, vertices, textures, cam_t, srp_dist_mat, srv_img_label, \
-                  srp_img_label, valid_labels_srp, valid_labels_srv, srv_class_weight, start_dsr):
+    def sr_losses(self, gt_batch, vertices, textures, cam_t, dsr_mc_dist_mat, dsr_c_img_label, \
+                  dsr_mc_img_label, valid_labels_dsr_mc, valid_labels_dsr_c, dsr_c_class_weight, start_dsr):
 
         def de_norm(images):
             images = images * torch.tensor([0.229, 0.224, 0.225], \
@@ -167,7 +167,7 @@ class DSRLoss(nn.Module):
                                             device=images.device).reshape(1,3,1,1)
             return images
 
-        def debug_rend_out(imgs, grphs, rend_out, srp_image_label, srp_dist_mat, idx):
+        def debug_rend_out(imgs, grphs, rend_out, dsr_mc_image_label, dsr_mc_dist_mat, idx):
             disp_img_list = []
             # Image
             disp_img = de_norm(imgs[idx])[0]
@@ -178,13 +178,13 @@ class DSRLoss(nn.Module):
             disp_img = grphs[idx].detach().clone().cpu().numpy().transpose((1,2,0))
             disp_img = (disp_img * 255).astype(np.uint8)
             disp_img_list.append(disp_img)
-            # SRP Dist Mat
-            disp_img = srp_dist_mat.detach().clone().cpu().numpy()[0].transpose((1, 2, 0))
+            # DSR_MC Dist Mat
+            disp_img = dsr_mc_dist_mat.detach().clone().cpu().numpy()[0].transpose((1, 2, 0))
             disp_img *= (255.0/disp_img.max())
             disp_img = disp_img.astype(np.uint8)
             disp_img_list.append(disp_img)
-            # SRP Image Label
-            disp_img = srp_image_label.detach().clone().cpu().numpy().transpose((1, 2, 0))
+            # DSR_MC Image Label
+            disp_img = dsr_mc_image_label.detach().clone().cpu().numpy().transpose((1, 2, 0))
             disp_img = (disp_img * 255).astype(np.uint8)
             disp_img_list.append(disp_img)
             #SR-Pixel - Prob
@@ -205,24 +205,24 @@ class DSRLoss(nn.Module):
         batch_size = vertices.shape[0]
         rend_dim = textures.shape[1]
 
-        loss_srp = torch.zeros(batch_size, device=vertices.device)
-        loss_srv = torch.zeros(batch_size, device=vertices.device)
+        loss_dsr_mc = torch.zeros(batch_size, device=vertices.device)
+        loss_dsr_c = torch.zeros(batch_size, device=vertices.device)
 
         # Don't compute SR losses if all loss_weights are zero
-        if self.srp_loss_weight == 0 and self.srv_loss_weight == 0:
+        if self.dsr_mc_loss_weight == 0 and self.dsr_c_loss_weight == 0:
             #logger.warning(f'SR losses turned off')
-            return loss_srp.mean(), loss_srv.mean()
+            return loss_dsr_mc.mean(), loss_dsr_c.mean()
 
         # Late start of SR Losses
         if not start_dsr:
             #logger.warning(f'dsr loss has not started')
-            return loss_srp.mean(), loss_srv.mean()
+            return loss_dsr_mc.mean(), loss_dsr_c.mean()
 
         # Prepare data for rendering the entire batch together
-        srp_dist_mat = srp_dist_mat.permute(0,3,1,2)
-        srp_img_label = srp_img_label.permute(0,3,1,2)
+        dsr_mc_dist_mat = dsr_mc_dist_mat.permute(0,3,1,2)
+        dsr_mc_img_label = dsr_mc_img_label.permute(0,3,1,2)
         textures = textures.unsqueeze(3)
-        srv_img_label = srv_img_label.long()
+        dsr_c_img_label = dsr_c_img_label.long()
         P = convert_camT_to_proj_mat(cam_t.cpu()).cuda() # TODO: check why sending directly cuda doesn't work
 
         batch_smpl_faces = self.smpl_faces.expand(rend_dim*batch_size, self.smpl_faces.shape[1], self.smpl_faces.shape[2])
@@ -246,42 +246,42 @@ class DSRLoss(nn.Module):
         # for samples without graphonomy labels
         for idx in range(batch_size):
 
-            if len(valid_labels_srp[idx]) == 0:
+            if len(valid_labels_dsr_mc[idx]) == 0:
                 #logger.warning(f'No valid labels')
                 continue
 
-            cur_srp_dist_mat = srp_dist_mat[None,idx]
-            cur_srv_img_label = srv_img_label[None,idx]
-            cur_srp_img_label = srp_img_label[idx]
-            cur_srv_class_weight = srv_class_weight[idx]
+            cur_dsr_mc_dist_mat = dsr_mc_dist_mat[None,idx]
+            cur_dsr_c_img_label = dsr_c_img_label[None,idx]
+            cur_dsr_mc_img_label = dsr_mc_img_label[idx]
+            cur_dsr_c_class_weight = dsr_c_class_weight[idx]
 
             start_index = rend_dim * idx
             cur_rend_out = rend_out[start_index:start_index+rend_dim]
 
             # SR-Pixel
-            rend_srp = cur_rend_out[0]
-            loss_srp[idx] = srp_loss(rend_srp, cur_srp_img_label, cur_srp_dist_mat, \
-                                     self.srp_loss_type, self.baseline)
+            rend_dsr_mc = cur_rend_out[0]
+            loss_dsr_mc[idx] = dsr_mc_loss(rend_dsr_mc, cur_dsr_mc_img_label, cur_dsr_mc_dist_mat, \
+                                     self.dsr_mc_loss_type, self.baseline)
 
             # SR-Vertex
             if rend_dim > 1:
-                self.criterion_srv.weight = cur_srv_class_weight
-                rend_srv = cur_rend_out[1:,:3].mean(1).unsqueeze(0)
-                loss_srv[idx] = self.criterion_srv(rend_srv, cur_srv_img_label)
+                self.criterion_dsr_c.weight = cur_dsr_c_class_weight
+                rend_dsr_c = cur_rend_out[1:,:3].mean(1).unsqueeze(0)
+                loss_dsr_c[idx] = self.criterion_dsr_c(rend_dsr_c, cur_dsr_c_img_label)
 
-            if torch.isnan(loss_srv[idx]) or torch.isnan(loss_srp[idx]) or \
-               torch.isinf(loss_srv[idx]) or torch.isinf(loss_srp[idx]):
+            if torch.isnan(loss_dsr_c[idx]) or torch.isnan(loss_dsr_mc[idx]) or \
+               torch.isinf(loss_dsr_c[idx]) or torch.isinf(loss_dsr_mc[idx]):
                 imgs, imgname, grphs = gt_batch['img'], gt_batch['imgname'], gt_batch['grph']
-                debug_rend_out(imgs, grphs, cur_rend_out, cur_srp_img_label, \
-                               cur_srp_dist_mat, idx)
+                debug_rend_out(imgs, grphs, cur_rend_out, cur_dsr_mc_img_label, \
+                               cur_dsr_mc_dist_mat, idx)
                 logger.warning(f'loss is nan for {imgname[idx]}')
                 logger.warning(f'current_rend - {torch.unique(cur_rend_out)}')
-                logger.warning(f'Rend_SRV - {torch.unique(rend_srv)}')
-                logger.warning(f'Rend_SRP - {torch.unique(rend_srp)}')
-                loss_srv[idx] = 0.
-                loss_srp[idx] = 0.
+                logger.warning(f'Rend_DSR_C - {torch.unique(rend_dsr_c)}')
+                logger.warning(f'Rend_DSR_MC - {torch.unique(rend_dsr_mc)}')
+                loss_dsr_c[idx] = 0.
+                loss_dsr_mc[idx] = 0.
 
-        return loss_srp.mean(), loss_srv.mean()
+        return loss_dsr_mc.mean(), loss_dsr_c.mean()
 
 
     def forward(self, pred, gt, start_dsr):
@@ -301,25 +301,25 @@ class DSRLoss(nn.Module):
         has_smpl = gt['has_smpl'].bool()
         has_pose_3d = gt['has_pose_3d'].bool()
 
-        gt_grph_srp_dist_mat = gt['grph_srp_dist_mat']
-        gt_grph_srv_label = gt['grph_srv_label']
-        gt_grph_srp_label = gt['grph_srp_label']
+        gt_grph_dsr_mc_dist_mat = gt['grph_dsr_mc_dist_mat']
+        gt_grph_dsr_c_label = gt['grph_dsr_c_label']
+        gt_grph_dsr_mc_label = gt['grph_dsr_mc_label']
         gt_smpl_textures = gt['smpl_textures_gt']
-        gt_valid_labels_srp = convert_valid_labels(gt['valid_labels_srp'], 'srp')
-        gt_valid_labels_srv = convert_valid_labels(gt['valid_labels_srv'], 'srv')
-        gt_srv_class_weight = gt['srv_class_weight']
+        gt_valid_labels_dsr_mc = convert_valid_labels(gt['valid_labels_dsr_mc'], 'dsr_mc')
+        gt_valid_labels_dsr_c = convert_valid_labels(gt['valid_labels_dsr_c'], 'dsr_c')
+        gt_dsr_c_class_weight = gt['dsr_c_class_weight']
 
         # Compute loss on Semantic rendering
-        loss_srp, loss_srv = self.sr_losses(gt,
+        loss_dsr_mc, loss_dsr_c = self.sr_losses(gt,
             pred_vertices,
             gt_smpl_textures,
             pred_cam_t,
-            gt_grph_srp_dist_mat,
-            gt_grph_srv_label,
-            gt_grph_srp_label,
-            gt_valid_labels_srp,
-            gt_valid_labels_srv,
-            gt_srv_class_weight,
+            gt_grph_dsr_mc_dist_mat,
+            gt_grph_dsr_c_label,
+            gt_grph_dsr_mc_label,
+            gt_valid_labels_dsr_mc,
+            gt_valid_labels_dsr_c,
+            gt_dsr_c_class_weight,
             start_dsr,
         )
 
@@ -360,8 +360,8 @@ class DSRLoss(nn.Module):
 
         #logger.info(f'\nl_keypoints - {loss_keypoints}')
         #logger.info(f'l_keypoints_3d - {loss_keypoints_3d}')
-        #logger.info(f'srp_loss - {loss_srp}')
-        #logger.info(f'srv_loss - {loss_srv}')
+        #logger.info(f'dsr_mc_loss - {loss_dsr_mc}')
+        #logger.info(f'dsr_c_loss - {loss_dsr_c}')
 
         loss_shape *= self.shape_loss_weight
         loss_keypoints *= self.keypoint_loss_weight
@@ -369,8 +369,8 @@ class DSRLoss(nn.Module):
         loss_regr_pose *= self.pose_loss_weight
         loss_regr_betas *= self.beta_loss_weight
         loss_cam = ((torch.exp(-pred_cam[:, 0] * 10)) ** 2).mean()
-        loss_srp *= self.srp_loss_weight
-        loss_srv *= self.srv_loss_weight
+        loss_dsr_mc *= self.dsr_mc_loss_weight
+        loss_dsr_c *= self.dsr_c_loss_weight
 
 
         loss_dict = {
@@ -380,8 +380,8 @@ class DSRLoss(nn.Module):
             'loss/loss_regr_betas': loss_regr_betas,
             'loss/loss_shape': loss_shape,
             'loss/loss_cam': loss_cam,
-            'loss/loss_srp': loss_srp,
-            'loss/loss_srv': loss_srv,
+            'loss/loss_dsr_mc': loss_dsr_mc,
+            'loss/loss_dsr_c': loss_dsr_c,
         }
 
         loss = sum(loss for loss in loss_dict.values())

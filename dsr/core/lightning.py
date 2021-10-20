@@ -41,13 +41,13 @@ class LitModule(pl.LightningModule):
                 pose_loss_weight=self.hparams.DSR.POSE_LOSS_WEIGHT,
                 beta_loss_weight=self.hparams.DSR.BETA_LOSS_WEIGHT,
                 openpose_train_weight=self.hparams.DSR.OPENPOSE_TRAIN_WEIGHT,
-                srp_loss_weight=self.hparams.DSR.SRP_LOSS_WEIGHT,
-                srv_loss_weight=self.hparams.DSR.SRV_LOSS_WEIGHT,
+                dsr_mc_loss_weight=self.hparams.DSR.DSR_MC_LOSS_WEIGHT,
+                dsr_c_loss_weight=self.hparams.DSR.DSR_C_LOSS_WEIGHT,
                 gt_train_weight=self.hparams.DSR.GT_TRAIN_WEIGHT,
                 loss_weight=self.hparams.DSR.LOSS_WEIGHT,
                 gamma_val=self.hparams.DSR.GAMMA_VAL,
                 sigma_val=self.hparams.DSR.SIGMA_VAL,
-                srp_loss_type=self.hparams.DSR.SRP_LOSS_TYPE,
+                dsr_mc_loss_type=self.hparams.DSR.DSR_MC_LOSS_TYPE,
             )
         elif self.hparams.METHOD == 'spin' or self.hparams.DATASET.ONLY_IUV == True:
             from ..models import HMR
@@ -176,41 +176,36 @@ class LitModule(pl.LightningModule):
             img_size=self.hparams.DATASET.IMG_RES,
         )
 
-        opt_joints = gt_model_joints
-        opt_pose = batch['pose']
-        opt_betas = batch['betas']
-        opt_cam_t = gt_cam_t
-
         batch['gt_cam_t'] = gt_cam_t
         batch['vertices'] = gt_vertices
 
         camera_center = torch.zeros(batch_size, 2, device=self.device)
-        opt_keypoints_2d = perspective_projection(
-            opt_joints,
+        gt_keypoints_2d = perspective_projection(
+            gt_model_joints,
             rotation=torch.eye(3, device=self.device).unsqueeze(0).expand(batch_size, -1, -1),
-            translation=opt_cam_t,
+            translation=gt_cam_t,
             focal_length=self.hparams.DATASET.FOCAL_LENGTH,
             camera_center=camera_center,
         )
 
-        opt_keypoints_2d = opt_keypoints_2d / (self.hparams.DATASET.IMG_RES / 2.)
+        gt_keypoints_2d = gt_keypoints_2d / (self.hparams.DATASET.IMG_RES / 2.)
 
-        opt_native_model_joints = self.smpl_native(
-            betas=opt_betas,
-            body_pose=opt_pose[:, 3:],
-            global_orient=opt_pose[:, :3]
+        gt_native_model_joints = self.smpl_native(
+            betas=gt_betas,
+            body_pose=gt_pose[:, 3:],
+            global_orient=gt_pose[:, :3]
         ).joints[:, :24, :]
 
-        opt_smpl_keypoints_2d = perspective_projection(
-            opt_native_model_joints,
+        gt_smpl_keypoints_2d = perspective_projection(
+            gt_native_model_joints,
             rotation=torch.eye(3, device=self.device).unsqueeze(0).expand(batch_size, -1, -1),
-            translation=opt_cam_t,
+            translation=gt_cam_t,
             focal_length=self.hparams.DATASET.FOCAL_LENGTH,
             camera_center=camera_center,
         )
         # Normalize keypoints to [-1,1]
-        opt_smpl_keypoints_2d = opt_smpl_keypoints_2d / (self.hparams.DATASET.IMG_RES / 2.)
-        batch['smpl_keypoints'] = opt_smpl_keypoints_2d
+        gt_smpl_keypoints_2d = gt_smpl_keypoints_2d / (self.hparams.DATASET.IMG_RES / 2.)
+        batch['smpl_keypoints'] = gt_smpl_keypoints_2d
 
         # Forward pass
         pred = self.model(inputs)
@@ -234,10 +229,10 @@ class LitModule(pl.LightningModule):
         images = input_batch['img']
 
         pred_vertices = output['smpl_vertices'].detach()
-        opt_vertices = input_batch['vertices']
+        gt_vertices = input_batch['vertices']
 
         pred_cam_t = output['pred_cam_t'].detach()
-        opt_cam_t = input_batch['gt_cam_t']
+        gt_cam_t = input_batch['gt_cam_t']
 
         pred_kp_2d = output['pred_kp2d'].detach() if 'pred_kp2d' in output.keys() else None
         gt_kp_2d = input_batch['smpl_keypoints']
@@ -252,9 +247,9 @@ class LitModule(pl.LightningModule):
             kp_2d=gt_kp_2d,
             sideview=self.hparams.TESTING.SIDEVIEW,
         )
-        images_opt = self.renderer.visualize_tb(
-            vertices=opt_vertices,
-            camera_translation=opt_cam_t,
+        images_gt = self.renderer.visualize_tb(
+            vertices=gt_vertices,
+            camera_translation=gt_cam_t,
             images=images,
             kp_2d=gt_kp_2d,
             sideview=self.hparams.TESTING.SIDEVIEW,
@@ -262,7 +257,7 @@ class LitModule(pl.LightningModule):
 
         if self.pl_logging == True:
             tb_logger.experiment.add_image('pred_shape', images_pred, self.global_step)
-            tb_logger.experiment.add_image('opt_shape', images_opt, self.global_step)
+            tb_logger.experiment.add_image('gt_shape', images_gt, self.global_step)
 
         if self.hparams.TRAINING.SAVE_IMAGES == True:
             images_pred = images_pred.cpu().numpy().transpose(1, 2, 0) * 255

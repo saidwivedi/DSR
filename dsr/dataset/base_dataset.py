@@ -14,10 +14,10 @@ from ..utils.image_utils import crop_cv2, flip_img, flip_pose, flip_kp, transfor
 from ..models import SMPL
 
 from ..semantic_rendering.data_utils import convert_grph_to_labels, convert_grph_to_binary_mask
-from ..semantic_rendering.data_utils import get_srp_probPrior, get_srv_probPrior
+from ..semantic_rendering.data_utils import get_dsr_mc_probPrior, get_dsr_c_probPrior
 from ..semantic_rendering.data_utils import convert_fixed_length_vector
 from ..semantic_rendering.loss import get_distance_matrix
-from ..semantic_rendering.constants import SRV_LABELS, SRV_LABELS_MAP
+from ..semantic_rendering.constants import DSR_C_LABELS, DSR_C_LABELS_MAP
 
 
 class BaseDataset(Dataset):
@@ -302,26 +302,26 @@ class BaseDataset(Dataset):
             gt_keypoints_2d_np = gt_keypoints_2d_orig.unsqueeze(0).numpy()
 
             # Get graphonomy data - SR-Pixel
-            grph_srp_gt, valid_labels_srp, _ = convert_grph_to_binary_mask(grph, True, True, gt_keypoints_2d_np)
-            smpl_textures_srp_gt = get_srp_probPrior(valid_labels_srp)
-            grph_srp_dist_mat = get_distance_matrix(grph_srp_gt)
+            grph_dsr_mc_gt, valid_labels_dsr_mc, _ = convert_grph_to_binary_mask(grph, True, True, gt_keypoints_2d_np)
+            smpl_textures_dsr_mc_gt = get_dsr_mc_probPrior(valid_labels_dsr_mc)
+            grph_dsr_mc_dist_mat = get_distance_matrix(grph_dsr_mc_gt)
 
             # Get graphonomy data - SR-Vertex
-            grph_srv_gt, valid_labels_srv, class_weight = convert_grph_to_labels(grph, gt_keypoints_2d_np, \
-                                            True, SRV_LABELS_MAP, SRV_LABELS)
-            smpl_textures_srv_gt = get_srv_probPrior(True, SRV_LABELS_MAP)
+            grph_dsr_c_gt, valid_labels_dsr_c, class_weight = convert_grph_to_labels(grph, gt_keypoints_2d_np, \
+                                            True, DSR_C_LABELS_MAP, DSR_C_LABELS)
+            smpl_textures_dsr_c_gt = get_dsr_c_probPrior(True, DSR_C_LABELS_MAP)
 
             # Combine Silheoute and Probability to be used as texture
-            smpl_textures_gt = np.concatenate((smpl_textures_srp_gt[None, ...], \
-                                                   smpl_textures_srv_gt), axis=0)
+            smpl_textures_gt = np.concatenate((smpl_textures_dsr_mc_gt[None, ...], \
+                                                   smpl_textures_dsr_c_gt), axis=0)
 
-            item['grph_srv_label'] = grph_srv_gt
-            item['grph_srp_label'] = grph_srp_gt
-            item['grph_srp_dist_mat'] = grph_srp_dist_mat
+            item['grph_dsr_c_label'] = grph_dsr_c_gt
+            item['grph_dsr_mc_label'] = grph_dsr_mc_gt
+            item['grph_dsr_mc_dist_mat'] = grph_dsr_mc_dist_mat
             item['smpl_textures_gt'] = smpl_textures_gt
-            item['srv_class_weight'] = class_weight
-            item['valid_labels_srp'] = convert_fixed_length_vector(valid_labels_srp, 'srp')
-            item['valid_labels_srv'] = convert_fixed_length_vector(valid_labels_srv, 'srv')
+            item['dsr_c_class_weight'] = class_weight
+            item['valid_labels_dsr_mc'] = convert_fixed_length_vector(valid_labels_dsr_mc, 'dsr_mc')
+            item['valid_labels_dsr_c'] = convert_fixed_length_vector(valid_labels_dsr_c, 'dsr_c')
 
         # prepare pose_3d for evaluation
         # For 3DPW get the 14 common joints from the rendered shape
