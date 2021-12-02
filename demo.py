@@ -23,6 +23,8 @@ import torch
 from torchvision.transforms import Normalize
 from loguru import logger
 import numpy as np
+import os
+from os.path import isfile, join
 import cv2
 import argparse
 import json
@@ -34,10 +36,13 @@ from dsr.core import config, constants
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--checkpoint', required=True, help='Path to pretrained checkpoint')
-parser.add_argument('--img', type=str, required=True, help='Path to input image')
+parser.add_argument('--img', type=str, required=False, help='Path to input image')
+parser.add_argument('--img_folder', type=str, required=False, help='Path to input image folders')
 parser.add_argument('--bbox', type=str, default=None, help='Path to .json file containing bounding box coordinates')
 parser.add_argument('--openpose', type=str, default=None, help='Path to .json containing openpose detections')
+parser.add_argument('--openpose_folder', type=str, default=None, help='Path to .json containing openpose detections')
 parser.add_argument('--outfile', type=str, default=None, help='Filename of output images. If not set use input filename.')
+parser.add_argument('--outfile_folder', type=str, default=None, help='Filename of output images folders')
 
 def bbox_from_openpose(openpose_file, rescale=1.2, detection_thresh=0.2):
     """Get center and scale for bounding box from openpose detections."""
@@ -90,9 +95,42 @@ def process_image(img_file, bbox_file, openpose_file, input_res=224):
     norm_img = normalize_img(img)[None]
     return norm_img
 
+
+def output_per_frame(img_fn, bbox_fn, openpose_fn, outfile, model):
+
+    # Preprocess input image and generate predictions
+    img = process_image(img_fn, bbox_fn, openpose_fn, input_res=constants.IMG_RES)
+    logger.info('Image Processed..')
+    
+    with torch.no_grad():
+        pred = model(img.to(device))
+        pred_vertices = pred['smpl_vertices']
+        pred_cam_t =pred['pred_cam_t']
+        pred_kp_2d = pred['pred_kp2d'] if 'pred_kp2d' in pred.keys() else None
+
+    images_pred = renderer.visualize_tb(
+        vertices=pred_vertices,
+        camera_translation=pred_cam_t,
+        images=img,
+        kp_2d=pred_kp_2d,
+        sideview=True,
+    )
+    logger.info('Output mesh rendered')
+
+    outfile = img_fn.split('.')[0] if outfile is None else outfile
+
+    images_pred = images_pred.cpu().numpy().transpose(1, 2, 0) * 255
+    images_pred = np.clip(images_pred, 0, 255).astype(np.uint8)
+    outfile = outfile + '_result.png'
+    cv2.imwrite(outfile, cv2.cvtColor(images_pred, cv2.COLOR_BGR2RGB))
+    logger.info(f'Final result saved to {outfile}') 
+
+
+
+
 if __name__ == '__main__':
     args = parser.parse_args()
-    
+
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
     # Load pretrained model
@@ -111,29 +149,22 @@ if __name__ == '__main__':
         faces=smpl.faces,
     )
 
-    # Preprocess input image and generate predictions
-    img = process_image(args.img, args.bbox, args.openpose, input_res=constants.IMG_RES)
-    logger.info('Image Processed..')
-    
-    with torch.no_grad():
-        pred = model(img.to(device))
-        pred_vertices = pred['smpl_vertices']
-        pred_cam_t =pred['pred_cam_t']
-        pred_kp_2d = pred['pred_kp2d'] if 'pred_kp2d' in pred.keys() else None
 
-    images_pred = renderer.visualize_tb(
-        vertices=pred_vertices,
-        camera_translation=pred_cam_t,
-        images=img,
-        kp_2d=pred_kp_2d,
-        sideview=True,
-    )
-    logger.info('Output mesh rendered')
+    if args.img_folder:
+        img_files = [f for f in sorted(os.listdir(args.img_folder)) if isfile(join(args.img_folder, f))]
+        openpose_kps = [f.split('.')[0] + '_keypoints.json' for f in img_files]
+        outfiles = [f.split('.')[0] + '_result.png' for f in img_files]
 
-    outfile = args.img.split('.')[0] if args.outfile is None else args.outfile
+        img_files = [join(args.img_folder, f) for f in img_files]
+        openpose_kps = [join(args.openpose_folder, f) for f in openpose_kps]
+        outfiles = [join(args.outfile_folder, f) for f in outfiles]
 
-    images_pred = images_pred.cpu().numpy().transpose(1, 2, 0) * 255
-    images_pred = np.clip(images_pred, 0, 255).astype(np.uint8)
-    outfile = outfile + '_result.png'
-    cv2.imwrite(outfile, cv2.cvtColor(images_pred, cv2.COLOR_BGR2RGB))
-    logger.info(f'Final result saved to {outfile}') 
+        for idx in range(len(img_files)):
+            img_fn = img_files[idx]
+            openpose_fn = openpose_kps[idx]
+            outfile = outfiles[idx]
+            output_per_frame(img_fn, None, openpose_fn, outfile, model)
+            
+    else:
+        output_per_frame(args.img, args.bbox, args.openpose, args.outfile, model)
+

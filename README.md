@@ -67,7 +67,10 @@ dsr_data/
 For running the demo code, you need a tightly fit bounding box with person in the center. This can either be provided as bounding box json file in the format `[top_left(x), top_left(y), width, height]`, [Openpose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) detection json or an image with person centered in it. An example with openpose json-
 ```shell
 # Use --bbox for bounding box json
-python demo.py --checkpoint dsr_data/dsr_w3DPW_checkpoint.pt --img examples/COCO_val_0544.jpg --openpose examples/COCO_val_0544_openpose.json
+python demo.py --checkpoint dsr_data/dsr_wo3DPW_checkpoint.pt --img examples/COCO_val_0544.jpg --openpose examples/COCO_val_0544_openpose.json
+
+# If you want to run a folder of images with openpose keypoints
+python demo.py --checkpoint dsr_data/dsr_wo3DPW_checkpoint.pt --img_folder #IMG_FOLDER --openpose_folder $KEYPOINTS_FOLDER --outfile_folder $OUTPUT_FOLDER
 ```
 Running the above command should show result as below
 <p float="left">
