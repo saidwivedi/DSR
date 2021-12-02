@@ -70,7 +70,7 @@ For running the demo code, you need a tightly fit bounding box with person in th
 python demo.py --checkpoint dsr_data/dsr_wo3DPW_checkpoint.pt --img examples/COCO_val_0544.jpg --openpose examples/COCO_val_0544_openpose.json
 
 # If you want to run a folder of images with openpose keypoints
-python demo.py --checkpoint dsr_data/dsr_wo3DPW_checkpoint.pt --img_folder #IMG_FOLDER --openpose_folder $KEYPOINTS_FOLDER --outfile_folder $OUTPUT_FOLDER
+python demo.py --checkpoint dsr_data/dsr_wo3DPW_checkpoint.pt --img_folder $IMG_FOLDER --openpose_folder $KEYPOINTS_FOLDER --outfile_folder $OUTPUT_FOLDER
 ```
 Running the above command should show result as below
 <p float="left">
@@ -122,6 +122,6 @@ This code is available for **non-commercial scientific research purposes** as de
 
 ## Contact
 
-For questions, please contact dsr@tue.mpg.de
+For code related questions, please contact sai.dwivedi@tuebingen.mpg.de
 
 For commercial licensing (and all related questions for business applications), please contact ps-licensing@tue.mpg.de.
